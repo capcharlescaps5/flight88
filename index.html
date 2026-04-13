@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Flight 88 Grill & Bar</title>
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --pink:#f472b6; --pink2:#ec4899;
+  --violet:#a855f7; --violet2:#7c3aed;
+  --dark:#09060e; --dark2:#0f0a18; --card-bg:#120d1e;
+  --muted:rgba(255,240,250,.38);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--dark);color:#fdf0f8;overflow-x:hidden;cursor:none}
+
+/* ══════════════════════════════
+   CURSOR — transform only, zero layout cost
+══════════════════════════════ */
+#cur,#cur-ring{
+  position:fixed;top:0;left:0;
+  pointer-events:none;z-index:9999;
+  border-radius:50%;
+  /* will-change keeps it on its own compositor layer */
+  will-change:transform;
+}
+#cur{
+  width:10px;height:10px;
+  background:var(--pink);
+  box-shadow:0 0 10px rgba(244,114,182,.9),0 0 22px rgba(244,114,182,.4);
+  mix-blend-mode:screen;
+  /* NO transition here — JS drives it directly every frame */
+}
+#cur-ring{
+  width:36px;height:36px;
+  border:1.5px solid rgba(244,114,182,.55);
+  background:transparent;z-index:9998;
+  /* only size/color transitions — position is RAF */
+  transition:width .22s ease,height .22s ease,border-color .22s ease,opacity .22s ease;
+}
+/* trail dots */
+.tr{
+  position:fixed;top:0;left:0;
+  border-radius:50%;pointer-events:none;
+  z-index:9990;will-change:transform,opacity;
+  animation:tr-fade .5s ease forwards;
+}
+@keyframes tr-fade{0%{opacity:.65}100%{opacity:0;transform:var(--tr-start) scale(0)}}
+
+/* ══════════════════════════════
+   BACKGROUND
+══════════════════════════════ */
+.grill-bg{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    repeating-linear-gradient(-45deg,transparent,transparent 28px,rgba(244,114,182,.018) 28px,rgba(244,114,182,.018) 30px),
+    repeating-linear-gradient( 45deg,transparent,transparent 28px,rgba(168,85,247,.013)  28px,rgba(168,85,247,.013)  30px);
+  animation:grill-shift 18s linear infinite;
+}
+@keyframes grill-shift{to{background-position:60px 60px,-60px 60px}}
+
+#embers{position:fixed;inset:0;pointer-events:none;z-index:1;overflow:hidden}
+.ember{position:absolute;border-radius:50%;animation:ember-rise linear infinite;opacity:0}
+@keyframes ember-rise{
+  0%  {opacity:0;  transform:translateY(0) translateX(0) scale(.3)}
+  12% {opacity:.9}
+  88% {opacity:.1}
+  100%{opacity:0;  transform:translateY(-110vh) translateX(var(--dx)) scale(1.3)}
+}
+
+/* ══════════════════════════════
+   NAV
+══════════════════════════════ */
+nav{
+  position:fixed;top:0;width:100%;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:15px 48px;
+  background:rgba(9,6,14,.75);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  z-index:500;
+  border-bottom:1px solid rgba(244,114,182,.08);
+  transition:background .4s,box-shadow .4s;
+}
+nav.scrolled{background:rgba(9,6,14,.97);box-shadow:0 2px 50px rgba(0,0,0,.7)}
+.nav-brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-img{width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 0 8px rgba(244,114,182,.55));transition:filter .3s}
+.nav-brand:hover .nav-logo-img{filter:drop-shadow(0 0 16px rgba(244,114,182,.9))}
+.nav-logo-text{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:.12em;line-height:1;color:#fff}
+.nav-logo-text span{color:var(--pink)}
+nav ul{display:flex;gap:30px;list-style:none}
+nav ul a{font-size:.75rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,240,250,.4);text-decoration:none;transition:color .2s;position:relative}
+nav ul a::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:1px;background:var(--pink);transform:scaleX(0);transition:transform .22s;border-radius:1px}
+nav ul a:hover{color:rgba(255,240,250,.9)}
+nav ul a:hover::after{transform:scaleX(1)}
+.nav-fb{font-size:.73rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;background:#1877f2;color:#fff;padding:8px 18px;border-radius:5px;text-decoration:none;transition:background .2s,transform .2s}
+.nav-fb:hover{background:#3395ff;transform:translateY(-1px)}
+@media(max-width:640px){nav{padding:12px 18px}nav ul{display:none}}
+
+/* ══════════════════════════════
+   HERO
+══════════════════════════════ */
+.hero{position:relative;height:100svh;min-height:620px;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden}
+.hero-bg{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 65% 55% at 50% 60%,rgba(168,85,247,.22) 0%,transparent 60%),
+    radial-gradient(ellipse 45% 45% at 18% 82%,rgba(244,114,182,.13) 0%,transparent 52%),
+    radial-gradient(ellipse 35% 55% at 82% 15%,rgba(124,58,237,.10) 0%,transparent 50%),
+    linear-gradient(180deg,#09060e 0%,#110820 48%,#09060e 100%);
+}
+/* depth orbs */
+.orb{position:absolute;border-radius:50%;filter:blur(65px);pointer-events:none;will-change:transform;animation:orb-float ease-in-out infinite}
+.orb1{width:460px;height:460px;background:rgba(168,85,247,.16);top:-10%;left:-8%;animation-duration:17s}
+.orb2{width:320px;height:320px;background:rgba(244,114,182,.11);bottom:-5%;right:0;animation-duration:22s;animation-delay:-8s}
+.orb3{width:200px;height:200px;background:rgba(124,58,237,.13);top:35%;left:65%;animation-duration:13s;animation-delay:-4s}
+@keyframes orb-float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(24px,-18px) scale(1.05)}66%{transform:translate(-14px,12px) scale(.96)}}
+
+/* perspective floor grid */
+.hero-grid{
+  position:absolute;inset:-30%;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(244,114,182,.055) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(244,114,182,.055) 1px,transparent 1px);
+  background-size:56px 56px;
+  transform:rotateX(65deg) scale(2.4);
+  transform-origin:50% 100%;
+  -webkit-mask-image:radial-gradient(ellipse 75% 55% at 50% 100%,black 20%,transparent 72%);
+  mask-image:radial-gradient(ellipse 75% 55% at 50% 100%,black 20%,transparent 72%);
+  animation:grid-move 7s linear infinite;
+}
+@keyframes grid-move{from{background-position:0 0,0 0}to{background-position:0 56px,0 0}}
+
+.hero-content{position:relative;z-index:10;animation:hero-in .95s cubic-bezier(.16,1,.3,1) both;transition:transform .08s linear}
+@keyframes hero-in{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+
+.hero-logo{
+  width:clamp(70px,13vw,118px);margin:0 auto 22px;display:block;
+  filter:drop-shadow(0 0 28px rgba(244,114,182,.55)) drop-shadow(0 0 55px rgba(168,85,247,.28));
+  animation:logo-float 4s ease-in-out infinite;
+}
+@keyframes logo-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:.67rem;letter-spacing:.26em;text-transform:uppercase;
+  color:rgba(255,240,250,.48);
+  border:1px solid rgba(244,114,182,.2);
+  padding:6px 20px;border-radius:100px;margin-bottom:22px;
+  background:rgba(244,114,182,.055);backdrop-filter:blur(6px);
+}
+.hero h1{
+  font-family:'Bebas Neue',sans-serif;
+  font-size:clamp(5rem,14vw,11rem);
+  line-height:.84;letter-spacing:.06em;
+  background:linear-gradient(160deg,#fff 10%,#fbc5e8 42%,var(--pink) 68%,var(--violet) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  filter:drop-shadow(0 4px 24px rgba(244,114,182,.28));
+}
+.hero-sub{margin-top:14px;font-size:.96rem;font-weight:300;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.hero-sub em{color:var(--pink);font-style:normal}
+.hero-cta{margin-top:34px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-primary{
+  font-size:.76rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  padding:13px 30px;border-radius:6px;
+  background:linear-gradient(135deg,var(--violet2),var(--pink2));
+  color:#fff;border:none;text-decoration:none;cursor:none;
+  transition:transform .25s cubic-bezier(.16,1,.3,1),box-shadow .25s;
+  box-shadow:0 4px 22px rgba(168,85,247,.32),inset 0 1px 0 rgba(255,255,255,.1);
+}
+.btn-primary:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 10px 34px rgba(168,85,247,.48)}
+.btn-outline{
+  font-size:.76rem;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  padding:13px 30px;border-radius:6px;background:transparent;cursor:none;
+  color:rgba(255,240,250,.52);border:1px solid rgba(244,114,182,.2);
+  text-decoration:none;transition:border-color .25s,color .25s,transform .25s,box-shadow .25s;
+}
+.btn-outline:hover{border-color:rgba(244,114,182,.55);color:rgba(255,240,250,.88);transform:translateY(-2px);box-shadow:0 4px 18px rgba(244,114,182,.13)}
+.scroll-hint{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:6px;opacity:.22;animation:bob 2.5s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(8px)}}
+.scroll-hint span{font-size:.54rem;letter-spacing:.2em;text-transform:uppercase}
+.scroll-arrow{width:1px;height:32px;background:linear-gradient(180deg,var(--pink),transparent)}
+
+/* ══════════════════════════════
+   HAPPY HOUR
+══════════════════════════════ */
+.happy-hour{
+  position:relative;overflow:hidden;background:var(--dark2);
+  border-top:1px solid rgba(244,114,182,.14);border-bottom:1px solid rgba(244,114,182,.14);
+  padding:56px 44px;text-align:center;z-index:2;
+}
+.happy-hour::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 90% at 50% 50%,rgba(168,85,247,.12) 0%,transparent 65%);pointer-events:none}
+.hh-ring{position:absolute;top:50%;left:50%;border-radius:50%;border:1px solid rgba(244,114,182,.07);pointer-events:none;transform-origin:center center}
+.hh-ring1{width:320px;height:320px;margin:-160px 0 0 -160px;animation:hspin 20s linear infinite}
+.hh-ring2{width:480px;height:480px;margin:-240px 0 0 -240px;animation:hspin 32s linear infinite reverse}
+/* Use 2D rotation + CSS transform to avoid 3D complexity breaking overflow */
+@keyframes hspin{from{transform:rotate(0deg) rotateX(70deg)}to{transform:rotate(360deg) rotateX(70deg)}}
+.hh-crown{font-size:2.2rem;display:block;margin-bottom:10px;animation:crown-pop 2s ease-in-out infinite}
+@keyframes crown-pop{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.1)}}
+.hh-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.6rem,6vw,5rem);letter-spacing:.1em;color:var(--pink);line-height:1}
+.hh-price{font-family:'Bebas Neue',sans-serif;font-size:clamp(3rem,9vw,6.5rem);letter-spacing:.04em;background:linear-gradient(135deg,#fff,#fbc5e8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1;margin:6px 0;filter:drop-shadow(0 4px 18px rgba(244,114,182,.28))}
+.hh-price sub{font-size:.4em;vertical-align:super;-webkit-text-fill-color:var(--pink)}
+.hh-desc{font-size:1rem;font-weight:300;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-top:6px}
+.hh-days{display:inline-flex;align-items:center;gap:10px;margin-top:16px;background:rgba(244,114,182,.07);border:1px solid rgba(244,114,182,.2);border-radius:100px;padding:8px 24px;font-size:.74rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--pink)}
+.hh-dot{width:6px;height:6px;border-radius:50%;background:var(--pink);animation:blink 1.4s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.1}}
+
+/* ══════════════════════════════
+   SECTIONS COMMON
+══════════════════════════════ */
+section.padded{padding:86px 48px;position:relative;z-index:2}
+@media(max-width:640px){section.padded{padding:58px 18px}}
+.section-label{font-size:.62rem;letter-spacing:.3em;text-transform:uppercase;color:var(--pink);margin-bottom:8px;opacity:.8}
+.section-title{font-family:'Bebas Neue',sans-serif;font-size:clamp(2.2rem,5vw,4rem);line-height:.96;letter-spacing:.07em;color:#fff}
+.divider{width:44px;height:1.5px;background:linear-gradient(90deg,var(--pink),var(--violet));margin:14px 0 36px;border-radius:2px}
+
+/* ══════════════════════════════
+   MENU
+══════════════════════════════ */
+#menu{background:rgba(15,10,24,.97)}
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:34px}
+.filter-btn{
+  font-size:.72rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;
+  padding:7px 18px;border-radius:5px;background:transparent;
+  border:1px solid rgba(244,114,182,.14);color:rgba(255,240,250,.32);
+  cursor:none;transition:border-color .2s,color .2s,background .2s,box-shadow .2s;
+}
+.filter-btn:hover{border-color:rgba(244,114,182,.38);color:rgba(255,240,250,.72)}
+.filter-btn.active{background:rgba(244,114,182,.1);border-color:rgba(244,114,182,.44);color:var(--pink);box-shadow:0 0 14px rgba(244,114,182,.1)}
+
+/* ── 3D CARD
+   Key fix: the OUTER wrapper handles perspective + tilt (no overflow:hidden).
+   The INNER card has overflow:hidden for the image clip.
+   This lets the 3D transform be visible without clipping. ── */
+.menu-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(258px,1fr));
+  gap:22px;
+}
+/* Outer tilt wrapper — no overflow, handles 3D */
+.card-tilt{
+  perspective:900px;
+  /* smooth spring back */
+  transition:transform .6s cubic-bezier(.16,1,.3,1);
+}
+/* Inner visible card */
+.menu-card{
+  position:relative;
+  background:var(--card-bg);
+  border:1px solid rgba(244,114,182,.10);
+  border-radius:14px;
+  overflow:hidden;           /* clips image only */
+  transform-style:preserve-3d;
+  will-change:transform;
+  backface-visibility:hidden;
+  transition:
+    box-shadow .35s ease,
+    border-color .35s ease,
+    transform .6s cubic-bezier(.16,1,.3,1);
+  cursor:none;
+}
+/* top-left shimmer face */
+.menu-card::before{
+  content:'';position:absolute;inset:0;border-radius:14px;z-index:5;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.065) 0%,transparent 55%);
+  opacity:0;transition:opacity .3s;
+}
+.menu-card:hover::before{opacity:1}
+
+/* glow on hover */
+.card-tilt:hover .menu-card{
+  border-color:rgba(244,114,182,.38);
+  box-shadow:
+    0 28px 55px rgba(0,0,0,.7),
+    0 0 0 1px rgba(244,114,182,.3),
+    0 0 30px rgba(244,114,182,.15),
+    0 0 70px rgba(168,85,247,.08);
+}
+
+.menu-card-img-wrap{position:relative;overflow:hidden;height:210px}
+.menu-card-img{
+  width:100%;height:100%;object-fit:cover;display:block;
+  filter:brightness(.75) saturate(.92);
+  transition:transform .6s cubic-bezier(.16,1,.3,1),filter .45s ease;
+  transform:scale(1);
+}
+.card-tilt:hover .menu-card-img{
+  transform:scale(1.08);
+  filter:brightness(.88) saturate(1.1);
+}
+.menu-card-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 35%,rgba(9,6,14,.96) 100%)}
+
+/* shine sweep — pure CSS, no JS */
+.menu-card-shine{
+  position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden;border-radius:14px;
+}
+.menu-card-shine::after{
+  content:'';position:absolute;top:-50%;left:-75%;
+  width:50%;height:200%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);
+  transform:skewX(-18deg);
+  transition:left .65s cubic-bezier(.16,1,.3,1);
+}
+.card-tilt:hover .menu-card-shine::after{left:140%}
+
+.card-tag{position:absolute;top:11px;right:11px;z-index:4;font-size:.57rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:4px 9px;border-radius:3px;background:rgba(9,6,14,.8);border:1px solid rgba(244,114,182,.25);color:rgba(255,240,250,.7)}
+.menu-card-noimg{height:210px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#1a0d2e,#0d0818);position:relative}
+.menu-card-emoji{font-size:3.2rem;opacity:.45}
+.menu-card-body{padding:14px 16px 18px;position:relative;z-index:2}
+.menu-card-name{font-weight:600;font-size:.98rem;color:#fdf0f8;margin-bottom:4px}
+.menu-card-price{font-family:'Bebas Neue',sans-serif;font-size:1.55rem;letter-spacing:.04em;background:linear-gradient(90deg,var(--pink),var(--violet));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* ══════════════════════════════
+   EVENTS
+══════════════════════════════ */
+#events{background:rgba(9,6,14,.97)}
+.events-intro{max-width:580px;font-size:1.1rem;font-weight:300;font-style:italic;color:var(--muted);line-height:1.84;margin-bottom:44px;border-left:2px solid rgba(244,114,182,.28);padding-left:18px}
+.events-intro strong{color:#fdf0f8;font-style:normal;font-weight:600}
+.events-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:14px}
+.event-card{
+  background:var(--card-bg);border:1px solid rgba(168,85,247,.12);border-radius:14px;padding:28px 22px;
+  transition:transform .32s cubic-bezier(.16,1,.3,1),border-color .3s,box-shadow .3s;
+  cursor:none;position:relative;overflow:hidden;
+}
+.event-card::before{content:'';position:absolute;bottom:-28px;right:-28px;width:110px;height:110px;border-radius:50%;background:radial-gradient(circle,rgba(168,85,247,.1),transparent);pointer-events:none}
+.event-card:hover{transform:translateY(-6px) scale(1.02);border-color:rgba(168,85,247,.32);box-shadow:0 20px 48px rgba(0,0,0,.5),0 0 26px rgba(168,85,247,.09)}
+.event-icon{font-size:2.2rem;margin-bottom:14px;display:block}
+.event-name{font-family:'Bebas Neue',sans-serif;font-size:1.42rem;letter-spacing:.07em;color:#fff;margin-bottom:7px}
+.event-desc{font-size:.86rem;font-weight:300;color:rgba(255,240,250,.35);line-height:1.66}
+
+/* ══════════════════════════════
+   ABOUT
+══════════════════════════════ */
+#about{max-width:1080px;margin:0 auto}
+.about-inner{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+@media(max-width:768px){.about-inner{grid-template-columns:1fr;gap:28px}}
+.about-visual{
+  position:relative;border-radius:16px;overflow:hidden;aspect-ratio:4/5;
+  background:linear-gradient(145deg,#16082e,#09060e);
+  border:1px solid rgba(244,114,182,.14);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .55s cubic-bezier(.16,1,.3,1),box-shadow .55s;
+}
+.about-visual:hover{transform:rotateY(-5deg) rotateX(3deg) scale(1.02);box-shadow:28px 18px 55px rgba(0,0,0,.6),-4px -4px 26px rgba(168,85,247,.07)}
+.about-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 55%,rgba(168,85,247,.18) 0%,transparent 60%);pointer-events:none}
+.about-logo-big{width:56%;filter:drop-shadow(0 0 44px rgba(244,114,182,.45));position:relative;z-index:1;animation:breathe 5s ease-in-out infinite}
+@keyframes breathe{0%,100%{filter:drop-shadow(0 0 44px rgba(244,114,182,.45))}50%{filter:drop-shadow(0 0 60px rgba(168,85,247,.62))}}
+.about-fallback{font-family:'Bebas Neue',sans-serif;font-size:9rem;color:rgba(244,114,182,.07);line-height:1}
+.about-accent{position:absolute;bottom:-14px;right:-14px;width:80px;height:80px;border:1.5px solid rgba(244,114,182,.18);border-radius:6px;animation:spin-slow 22s linear infinite}
+@keyframes spin-slow{to{transform:rotate(360deg)}}
+.about-desc{font-size:.98rem;font-weight:300;line-height:1.9;color:var(--muted);margin-bottom:26px}
+.about-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-box{background:rgba(244,114,182,.04);border:1px solid rgba(244,114,182,.1);border-radius:9px;padding:17px;transition:transform .28s ease,border-color .28s,box-shadow .28s;cursor:none}
+.stat-box:hover{transform:translateY(-3px);border-color:rgba(244,114,182,.28);box-shadow:0 10px 28px rgba(0,0,0,.35)}
+.stat-num{font-family:'Bebas Neue',sans-serif;font-size:2rem;line-height:1;color:var(--pink)}
+.stat-label{font-size:.63rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,240,250,.24);margin-top:3px}
+
+/* ══════════════════════════════
+   CONTACT
+══════════════════════════════ */
+#contact{background:rgba(15,10,24,.98)}
+.contact-top{display:grid;grid-template-columns:1fr 1fr;gap:42px;align-items:start}
+@media(max-width:768px){.contact-top{grid-template-columns:1fr;gap:26px}}
+.contact-cards{display:flex;flex-direction:column;gap:9px}
+.contact-card{background:rgba(244,114,182,.04);border:1px solid rgba(244,114,182,.10);border-radius:9px;padding:17px 20px;display:flex;gap:13px;align-items:flex-start;transition:transform .25s ease,border-color .25s,box-shadow .25s;cursor:none}
+.contact-card:hover{transform:translateX(4px);border-color:rgba(244,114,182,.28);box-shadow:0 8px 22px rgba(0,0,0,.32)}
+.contact-icon{font-size:1.1rem;flex-shrink:0;margin-top:2px}
+.contact-label{font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,240,250,.24);margin-bottom:3px}
+.contact-val{font-size:.9rem;font-weight:600;color:rgba(255,240,250,.72);line-height:1.52}
+.fb-btn{display:inline-flex;align-items:center;gap:8px;margin-top:14px;font-size:.74rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:11px 24px;border-radius:5px;background:#1877f2;color:#fff;text-decoration:none;transition:background .2s,transform .2s,box-shadow .2s;cursor:none}
+.fb-btn:hover{background:#3395ff;transform:translateY(-2px);box-shadow:0 6px 20px rgba(24,119,242,.28)}
+.map-wrap{border-radius:12px;overflow:hidden;border:1px solid rgba(244,114,182,.12);height:330px;background:var(--dark);position:relative;transition:box-shadow .3s,border-color .3s}
+.map-wrap:hover{border-color:rgba(244,114,182,.24);box-shadow:0 0 28px rgba(244,114,182,.06)}
+.map-wrap iframe{width:100%;height:100%;border:none;display:block}
+.map-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;cursor:none;background:var(--dark2);transition:background .22s}
+.map-placeholder:hover{background:#130a22}
+.map-pin{font-size:2rem}
+.map-load-txt{font-size:.7rem;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,240,250,.3)}
+.map-addr{font-size:.8rem;color:rgba(255,240,250,.18)}
+.map-btn{font-size:.7rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;padding:8px 20px;border-radius:4px;background:linear-gradient(135deg,var(--violet2),var(--pink2));color:#fff;border:none;cursor:none;margin-top:4px;transition:opacity .2s,transform .2s}
+.map-btn:hover{opacity:.88;transform:scale(1.04)}
+
+/* ══════════════════════════════
+   FOOTER
+══════════════════════════════ */
+footer{padding:20px 48px;border-top:1px solid rgba(244,114,182,.07);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:.64rem;color:rgba(255,240,250,.15);letter-spacing:.07em;position:relative;z-index:2}
+.footer-brand{display:flex;align-items:center;gap:8px}
+.footer-logo-img{width:24px;height:24px;object-fit:contain;opacity:.28}
+.footer-logo-txt{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.14em;color:rgba(244,114,182,.28)}
+
+/* ══════════════════════════════
+   FADE IN
+══════════════════════════════ */
+.fade-in{opacity:0;transform:translateY(16px);transition:opacity .55s ease,transform .55s ease}
+.fade-in.visible{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<!-- cursor elements -->
+<div id="cur"></div>
+<div id="cur-ring"></div>
+<div class="grill-bg"></div>
+<div id="embers"></div>
+
+<!-- NAV -->
+<nav id="navbar">
+  <a href="#" class="nav-brand">
+    <img class="nav-logo-img" src="./assets/flight88.png" onerror="this.style.display='none'" alt="Flight 88" width="36" height="36"/>
+    <div class="nav-logo-text">Flight<span>88</span></div>
+  </a>
+  <ul>
+    <li><a href="#menu">Menu</a></li>
+    <li><a href="#events">Events</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <a href="https://www.facebook.com/flight88bar/" target="_blank" rel="noopener" class="nav-fb">Facebook</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-bg">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+  </div>
+  <div class="hero-grid"></div>
+  <div class="hero-content" id="heroContent">
+    <img class="hero-logo" src="./assets/flight88.png" onerror="this.style.display='none'" alt="Flight 88" width="118" height="118"/>
+    <div class="hero-badge">✈ Grill · Bar · Nightlife · Quezon City</div>
+    <h1>Flight<br>88</h1>
+    <p class="hero-sub">Where <em>night</em> meets <em>flavor</em></p>
+    <div class="hero-cta">
+      <a href="#menu" class="btn-primary">View Menu</a>
+      <a href="#contact" class="btn-outline">Find Us</a>
+    </div>
+  </div>
+  <div class="scroll-hint"><span>Scroll</span><div class="scroll-arrow"></div></div>
+</section>
+
+<!-- HAPPY HOUR -->
+<div class="happy-hour">
+  <div class="hh-ring hh-ring1"></div>
+  <div class="hh-ring hh-ring2"></div>
+  <span class="hh-crown">🍺</span>
+  <div class="hh-title">Happy Hour</div>
+  <div class="hh-price"><sub>₱</sub>70<span style="-webkit-text-fill-color:rgba(244,114,182,.5);font-size:.4em">.00</span></div>
+  <div class="hh-desc">All Local Beer — Every Monday &amp; Thursday</div>
+  <div class="hh-days"><div class="hh-dot"></div>2:00 PM – 7:00 PM</div>
+</div>
+
+<!-- MENU -->
+<section id="menu" class="padded">
+  <div class="section-label">What We Serve</div>
+  <h2 class="section-title">Our Menu</h2>
+  <div class="divider"></div>
+  <div class="filter-bar" id="filters">
+    <button class="filter-btn active" data-type="all">All Items</button>
+    <button class="filter-btn" data-type="appetizer">🧅 Appetizers</button>
+    <button class="filter-btn" data-type="grill">🔥 Grilled</button>
+    <button class="filter-btn" data-type="pulutan">🍟 Pulutan</button>
+    <button class="filter-btn" data-type="filipino">🍲 Filipino</button>
+    <button class="filter-btn" data-type="cocktail">🍹 Cocktails</button>
+    <button class="filter-btn" data-type="blend">🍸 Blends</button>
+    <button class="filter-btn" data-type="shots">✈️ Flight Shots</button>
+    <button class="filter-btn" data-type="beer">🍺 Beer</button>
+    <button class="filter-btn" data-type="drinks">🥤 Beverages</button>
+  </div>
+  <div class="menu-grid" id="grid"></div>
+</section>
+
+<!-- EVENTS -->
+<section id="events" class="padded">
+  <div class="section-label">We Cater To</div>
+  <h2 class="section-title">Events &amp; Services</h2>
+  <div class="divider"></div>
+  <p class="events-intro fade-in"><strong>Delicious dishes with professional service</strong> — perfect for your special moment. Whether it's an intimate celebration or a grand gathering, Flight 88 makes every occasion unforgettable.</p>
+  <div class="events-grid">
+    <div class="event-card fade-in"><span class="event-icon">💍</span><div class="event-name">Weddings</div><div class="event-desc">Celebrate your big day with our premium grill spread and bar service in a warm, electric atmosphere.</div></div>
+    <div class="event-card fade-in"><span class="event-icon">🎂</span><div class="event-name">Birthdays</div><div class="event-desc">Make it a night to remember with great food, cold drinks, and the best vibes in Quezon City.</div></div>
+    <div class="event-card fade-in"><span class="event-icon">💼</span><div class="event-name">Office Events</div><div class="event-desc">Team dinners, year-end parties, and corporate gatherings done right — relaxed, flavorful, and fun.</div></div>
+    <div class="event-card fade-in"><span class="event-icon">👨‍👩‍👧‍👦</span><div class="event-name">Family Events</div><div class="event-desc">From reunions to milestones, bring the whole family for an authentic Filipino grill experience.</div></div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about" class="padded">
+  <div class="about-inner">
+    <div class="about-visual fade-in">
+      <div class="about-glow"></div>
+      <img class="about-logo-big" src="./assets/flight88.png" onerror="this.outerHTML='<div class=\'about-fallback\'>88</div>'" alt="Flight 88"/>
+      <div class="about-accent"></div>
+    </div>
+    <div class="fade-in">
+      <div class="section-label">Our Story</div>
+      <h2 class="section-title">Born from<br>Night &amp; Fire</h2>
+      <div class="divider"></div>
+      <p class="about-desc">Flight 88 Grill &amp; Restaurant is Quezon City's premium nightlife grill bar — a place where smoke, flavor, and good company collide. We bring real Filipino grill culture into a bold, electric atmosphere at Scout Tuason.</p>
+      <div class="about-stats">
+        <div class="stat-box"><div class="stat-num">88</div><div class="stat-label">The Flight Number</div></div>
+        <div class="stat-box"><div class="stat-num">QC</div><div class="stat-label">Scout Tuason</div></div>
+        <div class="stat-box"><div class="stat-num">24/7</div><div class="stat-label">Good Vibes</div></div>
+        <div class="stat-box"><div class="stat-num">🔥</div><div class="stat-label">Live Grill Energy</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact" class="padded">
+  <div class="section-label">Find Us</div>
+  <h2 class="section-title">Come Fly With Us</h2>
+  <div class="divider"></div>
+  <div class="contact-top">
+    <div>
+      <div class="contact-cards">
+        <div class="contact-card fade-in"><div class="contact-icon">📍</div><div><div class="contact-label">Location</div><div class="contact-val">Scout Tuason<br>Quezon City, Philippines</div></div></div>
+        <div class="contact-card fade-in"><div class="contact-icon">📞</div><div><div class="contact-label">Phone</div><div class="contact-val">(02) 8255 3984</div></div></div>
+        <div class="contact-card fade-in"><div class="contact-icon">🕐</div><div><div class="contact-label">Hours</div><div class="contact-val">Open Daily<br>Lunch to Late Night</div></div></div>
+        <div class="contact-card fade-in" style="border-color:rgba(244,114,182,.22);background:rgba(244,114,182,.05)"><div class="contact-icon">🍺</div><div><div class="contact-label">Happy Hour</div><div class="contact-val">₱70 Local Beer<br>Mon &amp; Thu · 2PM–7PM</div></div></div>
+      </div>
+      <a href="https://www.facebook.com/flight88bar/" target="_blank" rel="noopener" class="fb-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        Visit Our Facebook Page
+      </a>
+    </div>
+    <div class="map-wrap" id="mapWrap">
+      <div class="map-placeholder" id="mapPlaceholder">
+        <div class="map-pin">📍</div>
+        <div class="map-load-txt">Flight 88 Location</div>
+        <div class="map-addr">Scout Tuason, Quezon City</div>
+        <button class="map-btn" onclick="loadMap()">Load Map</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-brand">
+    <img class="footer-logo-img" src="./assets/flight88.png" onerror="this.style.display='none'" alt="" width="24" height="24"/>
+    <div class="footer-logo-txt">Flight 88</div>
+  </div>
+  <div>© 2025 Flight 88 Grill &amp; Bar · Quezon City, Philippines</div>
+  <div>Grill · Bar · Nightlife</div>
+</footer>
+
+<script>
+/* ══════════════════════════════════════════════════
+   CURSOR — butter-smooth via RAF + lerp on transform
+   Zero layout triggers: only transform is mutated.
+══════════════════════════════════════════════════ */
+const cur  = document.getElementById('cur');
+const ring = document.getElementById('cur-ring');
+
+// Raw mouse position (updated instantly on mousemove)
+let mX = -200, mY = -200;
+// Lerped positions for each element
+let cX = -200, cY = -200;   // dot  (fast)
+let rX = -200, rY = -200;   // ring (slow)
+let trailTimer = 0;
+
+document.addEventListener('mousemove', e => {
+  mX = e.clientX;
+  mY = e.clientY;
+}, { passive: true });
+
+// Single RAF loop drives everything — no setInterval, no setTimeout
+(function loop(ts) {
+  // dot follows mouse very closely
+  cX += (mX - cX) * 0.85;
+  cY += (mY - cY) * 0.85;
+  // ring lags behind with spring feel
+  rX += (mX - rX) * 0.12;
+  rY += (mY - rY) * 0.12;
+
+  // position via transform only (GPU composited, no layout)
+  cur.style.transform  = `translate(${cX - 5}px, ${cY - 5}px)`;
+  ring.style.transform = `translate(${rX - 18}px, ${rY - 18}px)`;
+
+  // spawn trail every ~35ms
+  if (ts - trailTimer > 35) {
+    trailTimer = ts;
+    spawnTrail(cX, cY);
+  }
+
+  requestAnimationFrame(loop);
+})(0);
+
+function spawnTrail(x, y) {
+  const t = document.createElement('div');
+  t.className = 'tr';
+  const sz = Math.random() * 5 + 2;
+  // use transform for position (no layout cost)
+  t.style.cssText = `
+    width:${sz}px;height:${sz}px;
+    background:${Math.random() > .5 ? 'rgba(244,114,182,.55)' : 'rgba(168,85,247,.42)'};
+    --tr-start: translate(${x - sz/2}px, ${y - sz/2}px);
+    transform: translate(${x - sz/2}px, ${y - sz/2}px);
+  `;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 500);
+}
+
+// cursor scale on interactive elements
+document.querySelectorAll('a, button, .menu-card, .card-tilt, .event-card, .stat-box, .contact-card').forEach(el => {
+  el.addEventListener('mouseenter', () => {
+    cur.style.width  = '18px'; cur.style.height = '18px';
+    cur.style.background = 'var(--violet)';
+    cur.style.boxShadow  = '0 0 16px rgba(168,85,247,.9), 0 0 32px rgba(168,85,247,.4)';
+    ring.style.width  = '50px'; ring.style.height = '50px';
+    ring.style.borderColor = 'rgba(168,85,247,.55)';
+  });
+  el.addEventListener('mouseleave', () => {
+    cur.style.width  = '10px'; cur.style.height = '10px';
+    cur.style.background = 'var(--pink)';
+    cur.style.boxShadow  = '0 0 10px rgba(244,114,182,.9), 0 0 22px rgba(244,114,182,.4)';
+    ring.style.width  = '36px'; ring.style.height = '36px';
+    ring.style.borderColor = 'rgba(244,114,182,.55)';
+  });
+});
+
+/* ══════════════════════════════
+   EMBERS
+══════════════════════════════ */
+const ec = document.getElementById('embers');
+const ecols = ['rgba(244,114,182,','rgba(251,146,60,','rgba(250,204,21,','rgba(168,85,247,','rgba(196,181,253,'];
+for (let i = 0; i < 45; i++) {
+  const p = document.createElement('div');
+  p.className = 'ember';
+  const sz  = Math.random() * 3 + 1;
+  const dx  = (Math.random() - .5) * 180;
+  const col = ecols[Math.floor(Math.random() * ecols.length)];
+  const op  = (Math.random() * .4 + .1).toFixed(2);
+  p.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;bottom:-4%;--dx:${dx}px;background:${col}${op});animation-duration:${7 + Math.random()*13}s;animation-delay:${Math.random()*10}s`;
+  ec.appendChild(p);
+}
+
+/* ══════════════════════════════
+   NAV SCROLL
+══════════════════════════════ */
+window.addEventListener('scroll', () => {
+  document.getElementById('navbar').classList.toggle('scrolled', scrollY > 60);
+}, { passive: true });
+
+/* ══════════════════════════════
+   HERO MOUSE PARALLAX
+   Gentle parallax — no 3D transform on hero-content to avoid z-fight
+══════════════════════════════ */
+const heroEl = document.getElementById('hero');
+const heroContent = document.getElementById('heroContent');
+const orb1 = document.querySelector('.orb1');
+const orb2 = document.querySelector('.orb2');
+const orb3 = document.querySelector('.orb3');
+
+let hpX = 0, hpY = 0, htX = 0, htY = 0;
+
+heroEl.addEventListener('mousemove', e => {
+  const w = heroEl.offsetWidth, h = heroEl.offsetHeight;
+  hpX = (e.clientX / w - .5);
+  hpY = (e.clientY / h - .5);
+}, { passive: true });
+heroEl.addEventListener('mouseleave', () => { hpX = 0; hpY = 0; });
+
+(function heroLoop() {
+  htX += (hpX - htX) * .06;
+  htY += (hpY - htY) * .06;
+  heroContent.style.transform = `translate(${htX * 14}px, ${htY * 8}px)`;
+  orb1.style.transform = `translate(${htX * 30}px, ${htY * 22}px)`;
+  orb2.style.transform = `translate(${-htX * 20}px, ${-htY * 14}px)`;
+  orb3.style.transform = `translate(${htX * 44}px, ${-htY * 30}px)`;
+  requestAnimationFrame(heroLoop);
+})();
+
+/* ══════════════════════════════
+   3D CARD TILT
+   Outer .card-tilt wrapper: no overflow, handles perspective + tilt.
+   Inner .menu-card:        overflow:hidden clips the image correctly.
+   This is the correct pattern — never put overflow:hidden on the element
+   with 3D transform, or it clips the lifted corners.
+══════════════════════════════ */
+function attach3D() {
+  document.querySelectorAll('.card-tilt').forEach(wrapper => {
+    const card = wrapper.querySelector('.menu-card');
+
+    wrapper.addEventListener('mousemove', e => {
+      const r  = wrapper.getBoundingClientRect();
+      const x  = (e.clientX - r.left)  / r.width  - .5;   // -0.5 … 0.5
+      const y  = (e.clientY - r.top)   / r.height - .5;
+
+      const tiltX  = -y * 16;   // rotateX (tip card forward/back)
+      const tiltY  =  x * 18;   // rotateY (tip card left/right)
+      const moveZ  = 12;
+      const shadowX = x * 18;
+      const shadowY = y * 14;
+
+      card.style.transform = `perspective(900px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translateZ(${moveZ}px)`;
+      card.style.boxShadow = `
+        ${shadowX}px ${shadowY + 22}px 50px rgba(0,0,0,.7),
+        0 0 0 1px rgba(244,114,182,.32),
+        0 0 28px rgba(244,114,182,.14),
+        ${-shadowX*.5}px ${-shadowY*.5}px 30px rgba(168,85,247,.06)
+      `;
+    });
+
+    wrapper.addEventListener('mouseleave', () => {
+      // spring back to flat — CSS transition handles the ease
+      card.style.transform = '';
+      card.style.boxShadow = '';
+    });
+  });
+}
+
+/* ══════════════════════════════
+   MENU DATA + RENDER
+══════════════════════════════ */
+const menu = [
+  { name:"Inihaw na Liempo",    price:200, type:"grill",     emoji:"🔥", img:"https://images.unsplash.com/photo-1529193591184-b1d58069ecdd?auto=format&fit=crop&w=600&q=80" },
+  { name:"Chicken Inasal",      price:200, type:"grill",     emoji:"🍗", img:"https://yummykitchentv.com/wp-content/uploads/2025/10/Chicken-Inasal-in-Air-Fryer_feature-image_smaller.jpg" },
+  { name:"Pork Sisig",          price:180, type:"grill",     emoji:"🐷", img:"https://media-cdn.tripadvisor.com/media/photo-m/1280/1a/ac/f5/87/crispy-pork-sisig.jpg" },
+  { name:"Nachos",              price:180, type:"pulutan",   emoji:"🧀", img:"https://images.unsplash.com/photo-1513456852971-30c0b8199d4d?auto=format&fit=crop&w=600&q=80" },
+  { name:"Calamari",            price:120, type:"pulutan",   emoji:"🦑", img:"https://static01.nyt.com/images/2015/04/29/dining/29PAIR/29PAIR-superJumbo.jpg" },
+  { name:"Kare-Kare",           price:350, type:"filipino",  emoji:"🍲", img:"https://www.kuserrano.com/wp-content/uploads/2023/04/bagnet-kare-kare.jpg" },
+  { name:"Crunchy Onion Rings", price:135, type:"appetizer", emoji:"🧅", img:"https://images.unsplash.com/photo-1639024471283-03518883512d?auto=format&fit=crop&w=600&q=80" },
+  { name:"French Fries",        price:125, type:"appetizer", emoji:"🍟", img:"https://images.unsplash.com/photo-1541592106381-b31e9677c0e5?auto=format&fit=crop&w=600&q=80" },
+  { name:"Cheese Stick",        price:150, type:"appetizer", emoji:"🧀", img:"https://images.unsplash.com/photo-1548340748-6d2b7d7da280?auto=format&fit=crop&w=600&q=80" },
+  { name:"Potato Wedges",       price:155, type:"appetizer", emoji:"🥔", img:"https://healthyfitnessmeals.com/wp-content/uploads/2025/06/parmesan-potato-wedges-01.jpg" },
+  { name:"Potato Chips",        price:155, type:"appetizer", emoji:"🥔", img:"https://images.unsplash.com/photo-1621447504864-d8686e12698c?auto=format&fit=crop&w=600&q=80" },
+  { name:"Sizzling Sweetcorn",  price:155, type:"appetizer", emoji:"🌽", img:"https://cdn.theliveinkitchen.com/wp-content/uploads/2024/09/04110249/Buttered-Sweet-Corn-The-Live-In-Kitchen-Featured.jpeg" },
+  { name:"Spring Roll",         price:165, type:"appetizer", emoji:"🥢", img:"https://www.thecookingcollective.com.au/wp-content/uploads/2022/08/Vegetable-Spring-Rolls-2-1.jpg" },
+  { name:"Lamb Bus Gear",       price:95,  type:"cocktail",  emoji:"🍹", img:"https://images.unsplash.com/photo-1551538827-9c037cb4f32a?auto=format&fit=crop&w=600&q=80" },
+  { name:"Classic Margarita",   price:95,  type:"cocktail",  emoji:"🍹", img:"https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=600&q=80" },
+  { name:"Super Sonic",         price:95,  type:"cocktail",  emoji:"🍹", img:"https://www.passionforsavings.com/content/uploads/2021/07/Cherry-Limeade-blog-3.jpg" },
+  { name:"Margarita",           price:95,  type:"cocktail",  emoji:"🍹", img:"https://soufflebombay.com/wp-content/uploads/2017/05/Classic-Margarita-Recipe.jpg" },
+  { name:"Aviation",            price:110, type:"cocktail",  emoji:"✈️", img:"https://images.unsplash.com/photo-1609951651556-5334e2706168?auto=format&fit=crop&w=600&q=80" },
+  { name:"Long Island",         price:110, type:"cocktail",  emoji:"🍹", img:"https://www.supergoldenbakes.com/wordpress/wp-content/uploads/2019/07/Long_island_iced_tea-1-4s.jpg" },
+  { name:"Bloody Mary Tea",     price:110, type:"cocktail",  emoji:"🍅", img:"https://qmixers.com/wp-content/uploads/2025/07/Q-Mixers_2025_BloodyMaryMix_BLOODY-MARY-Lemon_Can.webp" },
+  { name:"Sex on the Plane",    price:295, type:"blend",     emoji:"🍸", img:"https://images.unsplash.com/photo-1536935338788-846bb9981813?auto=format&fit=crop&w=600&q=80" },
+  { name:"In Flight Take Off",  price:295, type:"blend",     emoji:"🍸", img:"https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=600&q=80" },
+  { name:"Air Shuttle",         price:295, type:"blend",     emoji:"🍸", img:"https://www.cocktailmag.fr/media/k2/items/cache/71f67488b0857639cee631943a3fc6fa_M.jpg" },
+  { name:"Engine Intake",       price:295, type:"blend",     emoji:"🍸", img:"https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=600&q=80" },
+  { name:"Signature Cocktail",  price:170, type:"blend",     emoji:"🍸", img:"https://talesofthecocktail.org/wp-content/uploads/2016/01/How-to-Create-Your-Bars-Signature-Cocktail.jpg" },
+  { name:"Flight to New Zealand",price:180,type:"shots",     emoji:"✈️", img:"https://images.unsplash.com/photo-1527661591475-527312dd65f5?auto=format&fit=crop&w=600&q=80" },
+  { name:"Jet Helicopter",      price:180, type:"shots",     emoji:"🚁", img:"https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80" },
+  { name:"Stewardess",          price:180, type:"shots",     emoji:"✈️", img:"https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?auto=format&fit=crop&w=600&q=80" },
+  { name:"Buckle Up",           price:180, type:"shots",     emoji:"🪂", img:"https://1ou2cocktails.com/wp-content/uploads/2015/03/Cocktail_shooter_stinger_1ou2cocktails_kp_12022021_19607_lr.jpg" },
+  { name:"Honolulu Hawaii",     price:180, type:"shots",     emoji:"🌺", img:"https://images.unsplash.com/photo-1621263764928-df1444c5e859?auto=format&fit=crop&w=600&q=80" },
+  { name:"Engine Room",         price:180, type:"shots",     emoji:"⚙️", img:"https://www.touchbistro.com/wp-content/uploads/2020/05/guide-to-well-drinks-thumbnail.jpg" },
+  { name:"Turbulence",          price:180, type:"shots",     emoji:"💥", img:"https://images.unsplash.com/photo-1551538827-9c037cb4f32a?auto=format&fit=crop&w=600&q=80" },
+  { name:"Flight to Japan",     price:180, type:"shots",     emoji:"🍶", img:"https://hips.hearstapps.com/hmg-prod/images/cosmopolitan-1592951320.jpg" },
+  { name:"Black Mamba",         price:180, type:"shots",     emoji:"🖤", img:"https://images.unsplash.com/photo-1582106245687-cbb466a9f07f?auto=format&fit=crop&w=600&q=80" },
+  { name:"San Miguel Beer",     price:70,  type:"beer",      emoji:"🍺", img:"https://images.unsplash.com/photo-1608270586620-248524c67de9?auto=format&fit=crop&w=600&q=80" },
+  { name:"San Mig Light",       price:62,  type:"beer",      emoji:"🍺", img:"https://images.unsplash.com/photo-1535958636474-b021ee887b13?auto=format&fit=crop&w=600&q=80" },
+  { name:"Pale Pilsen",         price:62,  type:"beer",      emoji:"🍺", img:"https://images.unsplash.com/photo-1566633806327-68e152aaf26d?auto=format&fit=crop&w=600&q=80" },
+  { name:"San Mig Premium",     price:62,  type:"beer",      emoji:"🍺", img:"https://images.unsplash.com/photo-1518176258769-f227c798150e?auto=format&fit=crop&w=600&q=80" },
+  { name:"Imported Beer",       price:75,  type:"beer",      emoji:"🍺", img:"https://images.unsplash.com/photo-1575367439058-6096bb9cf5e2?auto=format&fit=crop&w=600&q=80" },
+  { name:"Softdrinks",          price:55,  type:"drinks",    emoji:"🥤", img:"https://i.pinimg.com/originals/c4/ee/15/c4ee15bc22fa3a63fce34fd4017026e4.jpg" },
+  { name:"Mineral Water",       price:45,  type:"drinks",    emoji:"💧", img:"https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=600&q=80" },
+  { name:"Iced Tea",            price:45,  type:"drinks",    emoji:"🧋", img:"https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=600&q=80" },
+  { name:"Hot Tea",             price:45,  type:"drinks",    emoji:"🍵", img:"https://images.unsplash.com/photo-1556679343-c7306c1976bc?auto=format&fit=crop&w=600&q=80" },
+  { name:"Coffee",              price:45,  type:"drinks",    emoji:"☕", img:"https://www.sharmispassions.com/wp-content/uploads/2012/07/espresso-coffee-recipe04-500x375.jpg" },
+  { name:"Fresh Mango Juice",   price:85,  type:"drinks",    emoji:"🥭", img:"https://images.unsplash.com/photo-1621506289937-a8e4df240d0b?auto=format&fit=crop&w=600&q=80" },
+  { name:"Banana Shake",        price:85,  type:"drinks",    emoji:"🍌", img:"https://www.dessertfortwo.com/wp-content/uploads/2023/02/Banana-Milkshake-8-735x1103.jpg" },
+  { name:"Strawberry Shake",    price:95,  type:"drinks",    emoji:"🍓", img:"https://images.unsplash.com/photo-1638176066666-ffb2f013c7dd?auto=format&fit=crop&w=600&q=80" },
+  { name:"Chocolate Shake",     price:95,  type:"drinks",    emoji:"🍫", img:"https://images.unsplash.com/photo-1572490122747-3968b75cc699?auto=format&fit=crop&w=600&q=80" },
+];
+
+const tagLabels = { grill:'Grilled', pulutan:'Pulutan', filipino:'Filipino', drinks:'Beverage', appetizer:'Appetizer', cocktail:'Cocktail', blend:'Signature', shots:'Flight Shot', beer:'Beer' };
+let current = 'all';
+
+// inject card-in keyframe once
+document.head.insertAdjacentHTML('beforeend', '<style>@keyframes card-in{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}</style>');
+
+function render() {
+  const grid  = document.getElementById('grid');
+  const items = menu.filter(m => current === 'all' || m.type === current);
+  grid.innerHTML = items.map((item, i) => `
+    <div class="card-tilt" style="animation:card-in .4s ${i * .04}s cubic-bezier(.16,1,.3,1) both">
+      <div class="menu-card">
+        <div class="menu-card-img-wrap">
+          <img class="menu-card-img" src="${item.img}" loading="lazy" decoding="async"
+            alt="${item.name}" width="600" height="210"
+            onerror="this.parentElement.innerHTML='<div class=\\"menu-card-noimg\\"><span class=\\"menu-card-emoji\\">${item.emoji}</span></div>'"
+          />
+          <div class="menu-card-overlay"></div>
+          <div class="menu-card-shine"></div>
+          <div class="card-tag">${tagLabels[item.type]}</div>
+        </div>
+        <div class="menu-card-body">
+          <div class="menu-card-name">${item.name}</div>
+          <div class="menu-card-price">&#8369;${item.price}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  // attach 3D after DOM is ready
+  requestAnimationFrame(attach3D);
+}
+
+document.getElementById('filters').addEventListener('click', e => {
+  const btn = e.target.closest('.filter-btn');
+  if (!btn) return;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  current = btn.dataset.type;
+  render();
+});
+render();
+
+/* ══════════════════════════════
+   MAP
+══════════════════════════════ */
+function loadMap() {
+  const ph = document.getElementById('mapPlaceholder');
+  if (!ph) return;
+  ph.style.display = 'none';
+  const f = document.createElement('iframe');
+  f.src = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d120!2d121.033454!3d14.6371711!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397b7acd2ac54df%3A0xb50c16d23dbddd9e!2sFlight%2088%20Grill%20and%20Restaurant!5e0!3m2!1sen!2sph!4v1699000000000!5m2!1sen!2sph';
+  f.allowFullscreen = ''; f.loading = 'lazy';
+  f.referrerPolicy = 'no-referrer-when-downgrade';
+  f.title = 'Flight 88 on Google Maps';
+  document.getElementById('mapWrap').appendChild(f);
+}
+if (window.matchMedia('(hover:hover) and (pointer:fine)').matches) loadMap();
+
+/* ══════════════════════════════
+   SCROLL FADE
+══════════════════════════════ */
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+  });
+}, { threshold: .1 });
+document.querySelectorAll('.fade-in').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
